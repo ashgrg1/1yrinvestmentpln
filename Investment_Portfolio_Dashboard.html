@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Investment Portfolio Dashboard — $25,000</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg:       #0d1117;
+      --bg2:      #161b22;
+      --bg3:      #1c2330;
+      --border:   rgba(48,54,61,0.9);
+      --text:     #e6edf3;
+      --text2:    #8b949e;
+      --text3:    #484f58;
+      --blue:     #58a6ff;
+      --green:    #3fb950;
+      --red:      #f85149;
+      --gold:     #d29922;
+      --purple:   #bc8cff;
+      --cyan:     #39d353;
+      --accent:   #1f6feb;
+      --r:        10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Top Header Bar ── */
+    .topbar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 24px; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-mark {
+      width: 30px; height: 30px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: #fff;
+    }
+    .logo-name { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .nav-pills { display: flex; gap: 4px; }
+    .nav-pill {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .nav-pill.active, .nav-pill:hover { background: var(--bg3); color: var(--text); }
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+    .live-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .live-label { font-size: 11.5px; font-weight: 600; color: var(--green); display: flex; align-items: center; gap: 5px; }
+    .date-chip { font-size: 12px; color: var(--text2); font-weight: 500; }
+
+    /* ── Portfolio Header ── */
+    .port-header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 32px 24px;
+    }
+    .port-title-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+    .port-name { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .port-value { font-size: 2.6rem; font-weight: 800; color: var(--text); letter-spacing: -1.5px; line-height: 1; }
+    .port-gain  {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 8px;
+      font-size: 13px; font-weight: 700;
+      background: rgba(63,185,80,0.12);
+      border: 1px solid rgba(63,185,80,0.25);
+      padding: 4px 12px; border-radius: 6px;
+      color: var(--green);
+    }
+
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+      margin-top: 24px;
+    }
+    .kpi-strip .kpi {
+      padding: 16px 20px;
+      border-right: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .kpi-strip .kpi:last-child { border-right: none; }
+    .kpi-lbl { font-size: 10.5px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .kpi-val { font-size: 1.3rem; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+    .kpi-sub { font-size: 11px; margin-top: 4px; font-weight: 600; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .neu { color: var(--text2); }
+
+    /* ── Main Grid ── */
+    main { padding: 24px 32px; }
+
+    .grid-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-bottom: 16px; }
+    .grid-2-eq { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .full { margin-bottom: 16px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    .card-head {
+      padding: 16px 20px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .card-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .card-sub   { font-size: 11.5px; color: var(--text2); margin-top: 2px; }
+    .card-body  { padding: 16px 20px; }
+
+    /* ── Holdings Table ── */
+    .holdings-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .holdings-table th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text3);
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+    }
+    .holdings-table td {
+      padding: 13px 14px;
+      border-bottom: 1px solid rgba(48,54,61,0.5);
+      vertical-align: middle;
+    }
+    .holdings-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    .holdings-table tbody tr:last-child td { border-bottom: none; }
+
+    .symbol-cell { display: flex; align-items: center; gap: 10px; }
+    .sym-badge {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0;
+      letter-spacing: 0px;
+    }
+    .sym-name { font-size: 12.5px; font-weight: 700; color: var(--text); }
+    .sym-type { font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+    .price-mono { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 600; color: var(--text); }
+    .gain-cell  { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 700; }
+
+    .risk-bar { display: flex; align-items: center; gap: 6px; }
+    .risk-track {
+      width: 50px; height: 5px; background: var(--bg3);
+      border-radius: 99px; overflow: hidden;
+    }
+    .risk-fill { height: 100%; border-radius: 99px; }
+    .risk-label { font-size: 10.5px; font-weight: 700; }
+
+    .weight-bar { display: flex; align-items: center; gap: 6px; }
+    .w-track { width: 50px; height: 5px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+    .w-fill  { height: 100%; border-radius: 99px; background: var(--blue); }
+    .w-pct   { font-size: 11px; font-weight: 700; color: var(--text2); }
+
+    .tag {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 5px; font-size: 10.5px; font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .tag-growth    { background: rgba(88,166,255,0.12); color: var(--blue); }
+    .tag-blend     { background: rgba(63,185,80,0.12);  color: var(--green); }
+    .tag-income    { background: rgba(210,153,34,0.12); color: var(--gold); }
+
+    /* ── Scenario Table ── */
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    .scenario-card {
+      border-radius: 8px;
+      padding: 14px 16px;
+      border: 1px solid;
+    }
+    .scenario-card.bull  { background: rgba(63,185,80,0.06);  border-color: rgba(63,185,80,0.2); }
+    .scenario-card.base  { background: rgba(88,166,255,0.06); border-color: rgba(88,166,255,0.2); }
+    .scenario-card.bear  { background: rgba(248,81,73,0.06);  border-color: rgba(248,81,73,0.2); }
+    .sc-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .bull .sc-label { color: var(--green); }
+    .base .sc-label { color: var(--blue); }
+    .bear .sc-label { color: var(--red); }
+    .sc-value { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .bull .sc-value { color: var(--green); }
+    .base .sc-value { color: var(--blue); }
+    .bear .sc-value { color: var(--red); }
+    .sc-gain  { font-size: 12px; font-weight: 600; }
+    .sc-sub   { font-size: 11px; color: var(--text2); margin-top: 6px; }
+
+    /* ── Disclaimer ── */
+    .disclaimer {
+      background: rgba(210,153,34,0.06);
+      border: 1px solid rgba(210,153,34,0.2);
+      border-radius: var(--r);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .disclaimer-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .disclaimer-text { font-size: 12px; line-height: 1.6; color: #d29922; font-weight: 500; }
+    .disclaimer-text strong { font-weight: 800; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .kpi-strip { grid-template-columns: repeat(3,1fr); }
+    }
+    @media (max-width: 760px) {
+      main { padding: 16px; }
+      .port-header { padding: 20px 16px 16px; }
+      .topbar { padding: 0 16px; }
+      .grid-2-eq, .grid-3 { grid-template-columns: 1fr; }
+      .scenario-grid { grid-template-columns: 1fr; }
+      .kpi-strip { grid-template-columns: repeat(2,1fr); }
+      .port-value { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Top Navigation Bar ── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">
+      <div class="logo-mark">V</div>
+      <div class="logo-name">VaultBroker Pro</div>
+    </div>
+    <div class="nav-pills">
+      <div class="nav-pill active">Portfolio</div>
+      <div class="nav-pill">Watchlist</div>
+      <div class="nav-pill">Research</div>
+      <div class="nav-pill">Trade</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="live-label"><span class="live-dot"></span> LIVE · NYSE</span>
+    <span class="date-chip">June 17, 2026 · 3:42 PM EST</span>
+  </div>
+</div>
+
+<!-- ── Portfolio Header ── -->
+<div class="port-header">
+  <div class="port-title-row">
+    <div>
+      <div class="port-name">My 2026 Growth Portfolio</div>
+      <div class="port-value">$28,047.18</div>
+      <div class="port-gain">▲ +$3,047.18 &nbsp;·&nbsp; +12.19% YTD &nbsp;·&nbsp; vs $25,000.00 invested</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">DAY CHANGE</div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--green);font-family:'JetBrains Mono',monospace;">+$187.42</div>
+      <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:2px;">+0.67% today</div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-lbl">Total Invested</div>
+      <div class="kpi-val">$25,000</div>
+      <div class="kpi-sub neu">5 positions</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Unrealized Gain</div>
+      <div class="kpi-val pos">+$3,047</div>
+      <div class="kpi-sub pos">+12.19% YTD</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Est. Year-End (Base)</div>
+      <div class="kpi-val" style="color:var(--blue);">$31,250</div>
+      <div class="kpi-sub" style="color:var(--blue);">+$6,250 (+25%)</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Portfolio Yield</div>
+      <div class="kpi-val pos">2.86%</div>
+      <div class="kpi-sub neu">Div + Bond income</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Risk Score</div>
+      <div class="kpi-val" style="color:var(--gold);">6.1 / 10</div>
+      <div class="kpi-sub" style="color:var(--gold);">Moderate-Growth</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main Content ── -->
+<main>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    <div class="disclaimer-icon">⚠️</div>
+    <div class="disclaimer-text">
+      <strong>EDUCATIONAL PURPOSES ONLY — NOT FINANCIAL ADVICE.</strong>
+      This dashboard is built for illustrative purposes using publicly available market data as of June 17, 2026.
+      All projections are simulated estimates and do not guarantee future performance. Past performance does not predict future results.
+      Prices shown are approximate. <strong>Consult a licensed financial advisor or registered broker-dealer before making any investment decisions.</strong>
+      Investing involves risk including possible loss of principal.
+    </div>
+  </div>
+
+  <!-- Holdings Table -->
+  <div class="card full">
+    <div class="card-head" style="padding:18px 20px 12px;">
+      <div>
+        <div class="card-title">Holdings — 5 Positions</div>
+        <div class="card-sub">$25,000 initial allocation · Prices as of June 17, 2026</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);text-align:right;">
+        <div>Total Value</div>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--text);font-family:'JetBrains Mono',monospace;">$28,047.18</div>
+      </div>
+    </div>
+    <table class="holdings-table">
+      <thead>
+        <tr>
+          <th>Symbol / Name</th>
+          <th>Type</th>
+          <th>Shares / Units</th>
+          <th>Entry Price</th>
+          <th>Current Price</th>
+          <th>Cost Basis</th>
+          <th>Market Value</th>
+          <th>Gain / Loss</th>
+          <th>% Return</th>
+          <th>Weight</th>
+          <th>Risk</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- NVDA -->
+        <tr>
+          <td>
+            <div class="symbol-cell">
+              <div class="sym-badge" style="background:#76b900;">NVDA</div>
+              <div>
+                <div class="sym-name">NVIDIA Corp.</div>
+                <div class="sym-type">NASDAQ · Semiconductor / AI</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="tag tag-growth">Growth</span></td>
+          <td class="price-mono">27.03</td>
+          <td class="price-mono">$148.00</td>
+          <td class="price-mono">$205.35</td>
+          <td class="price-mono">$4,000.00</td>
+          <td class="price-mono">$5,550.82</td>
+          <td class="gain-cell pos">+$1,550.82</td>
+          <td class="gain-cell pos">+38.77%</td>
+          <td>
+            <div class="weight-bar">
+              <div class="w-track"><div class="w-fill" style="width:100%;background:#76b900;"></div></div>
+              <span class="w-pct">19.8%</span>
+            </div>
+          </td>
+          <td>
+            <div class="risk-bar">
+              <div class="risk-track"><div class="risk-fill" style="width:80%;background:var(--red);"></div></div>
+              <span class="risk-label" style="color:var(--red);">8/10</span>
+            </div>
+          </td>
+        </tr>
+        <!-- META -->
+        <tr>
+          <td>
+            <div class="symbol-cell">
+              <div class="sym-badge" style="background:#0081fb;">META</div>
+              <div>
+                <div class="sym-name">Meta Platforms</div>
+                <div class="sym-type">NASDAQ · Social Media / AI</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="tag tag-growth">Growth</span></td>
+          <td class="price-mono">6.67</td>
+          <td class="price-mono">$600.00</td>
+          <td class="price-mono">$680.00</td>
+          <td class="price-mono">$4,000.00</td>
+          <td class="price-mono">$4,535.60</td>
+          <td class="gain-cell pos">+$535.60</td>
+          <td class="gain-cell pos">+13.39%</td>
+          <td>
+            <div class="weight-bar">
+              <div class="w-track"><div class="w-fill" style="width:80%;background:#0081fb;"></div></div>
+              <span class="w-pct">16.2%</span>
+            </div>
+          </td>
+          <td>
+            <div class="risk-bar">
+              <div class="risk-track"><div class="risk-fill" style="width:70%;background:var(--gold);"></div></div>
+              <span class="risk-label" style="color:var(--gold);">7/10</span>
+            </div>
+          </td>
+        </tr>
+        <!-- AMZN -->
+        <tr>
+          <td>
+            <div class="symbol-cell">
+              <div class="sym-badge" style="background:#ff9900;">AMZN</div>
+              <div>
+                <div class="sym-name">Amazon.com Inc.</div>
+                <div class="sym-type">NASDAQ · E-Commerce / Cloud</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="tag tag-growth">Growth</span></td>
+          <td class="price-mono">17.78</td>
+          <td class="price-mono">$225.00</td>
+          <td class="price-mono">$246.00</td>
+          <td class="price-mono">$4,000.00</td>
+          <td class="price-mono">$4,373.88</td>
+          <td class="gain-cell pos">+$373.88</td>
+          <td class="gain-cell pos">+9.35%</td>
+          <td>
+            <div class="weight-bar">
+              <div class="w-track"><div class="w-fill" style="width:70%;background:#ff9900;"></div></div>
+              <span class="w-pct">15.6%</span>
+            </div>
+          </td>
+          <td>
+            <div class="risk-bar">
+              <div class="risk-track"><div class="risk-fill" style="width:60%;background:var(--gold);"></div></div>
+              <span class="risk-label" style="color:var(--gold);">6/10</span>
+            </div>
+          </td>
+        </tr>
+        <!-- VOO -->
+        <tr>
+          <td>
+            <div class="symbol-cell">
+              <div class="sym-badge" style="background:#cc0000;">VOO</div>
+              <div>
+                <div class="sym-name">Vanguard S&amp;P 500 ETF</div>
+                <div class="sym-type">NYSEARCA · Index ETF · 1.10% yield</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="tag tag-blend">Blend</span></td>
+          <td class="price-mono">15.84</td>
+          <td class="price-mono">$505.00</td>
+          <td class="price-mono">$535.00</td>
+          <td class="price-mono">$8,000.00</td>
+          <td class="price-mono">$8,474.40</td>
+          <td class="gain-cell pos">+$474.40</td>
+          <td class="gain-cell pos">+5.93%</td>
+          <td>
+            <div class="weight-bar">
+              <div class="w-track"><div class="w-fill" style="width:55%;background:#cc0000;"></div></div>
+              <span class="w-pct">30.2%</span>
+            </div>
+          </td>
+          <td>
+            <div class="risk-bar">
+              <div class="risk-track"><div class="risk-fill" style="width:30%;background:var(--green);"></div></div>
+              <span class="risk-label" style="color:var(--green);">3/10</span>
+            </div>
+          </td>
+        </tr>
+        <!-- Treasury -->
+        <tr>
+          <td>
+            <div class="symbol-cell">
+              <div class="sym-badge" style="background:#1a7abf;">T-10Y</div>
+              <div>
+                <div class="sym-name">US 10-Year Treasury Bond</div>
+                <div class="sym-type">Government Bond · 4.50% yield</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="tag tag-income">Income</span></td>
+          <td class="price-mono">$5,000</td>
+          <td class="price-mono">Par $100</td>
+          <td class="price-mono">4.50% p.a.</td>
+          <td class="price-mono">$5,000.00</td>
+          <td class="price-mono">$5,112.50</td>
+          <td class="gain-cell pos">+$112.50</td>
+          <td class="gain-cell pos">+2.25%</td>
+          <td>
+            <div class="weight-bar">
+              <div class="w-track"><div class="w-fill" style="width:40%;background:#1a7abf;"></div></div>
+              <span class="w-pct">18.2%</span>
+            </div>
+          </td>
+          <td>
+            <div class="risk-bar">
+              <div class="risk-track"><div class="risk-fill" style="width:10%;background:var(--green);"></div></div>
+              <span class="risk-label" style="color:var(--green);">1/10</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Charts Row 1: Performance + Allocation -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Price Performance — Jan to Jun 2026</div>
+          <div class="card-sub">Monthly close · Indexed to entry price (entry = 100%)</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="perfChart" height="160"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Portfolio Allocation</div>
+          <div class="card-sub">By market value · Jun 17, 2026</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="allocChart" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 2: P&L Bar + Risk/Return Scatter -->
+  <div class="grid-2-eq">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Cost Basis vs Current Value</div>
+          <div class="card-sub">Green = gain · Each position</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="plChart" height="180"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Risk vs Expected Return</div>
+          <div class="card-sub">Bubble size = portfolio weight · Annualized</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="riskChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 3: Year-End Projection -->
+  <div class="card full">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Year-End Projection — 3 Scenarios (Jul – Dec 2026)</div>
+        <div class="card-sub">Bull / Base / Bear case based on analyst consensus ranges · Dashed = projected</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <canvas id="projChart" height="100"></canvas>
+    </div>
+  </div>
+
+  <!-- Scenario Cards + Avg Price Bar -->
+  <div class="grid-2-eq" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-head" style="margin-bottom:14px;">
+        <div>
+          <div class="card-title">Year-End Scenarios</div>
+          <div class="card-sub">Starting from $25,000 invested</div>
+        </div>
+      </div>
+      <div class="card-body" style="padding-top:0;">
+        <div class="scenario-grid">
+          <div class="scenario-card bull">
+            <div class="sc-label">Bull Case</div>
+            <div class="sc-value">$33,800</div>
+            <div class="sc-gain pos">+$8,800 (+35.2%)</div>
+            <div class="sc-sub">AI supercycle continues, all 3 tech stocks hit targets</div>
+          </div>
+          <div class="scenario-card base">
+            <div class="sc-label">Base Case</div>
+            <div class="sc-value">$31,250</div>
+            <div class="sc-gain" style="color:var(--blue);">+$6,250 (+25.0%)</div>
+            <div class="sc-sub">Moderate growth, Fed holds rates, no major corrections</div>
+          </div>
+          <div class="scenario-card bear">
+            <div class="sc-label">Bear Case</div>
+            <div class="sc-value">$26,100</div>
+            <div class="sc-gain pos">+$1,100 (+4.4%)</div>
+            <div class="sc-sub">Tech correction, bonds provide safety cushion at 4.5%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Analyst 12-Month Price Targets</div>
+          <div class="card-sub">Consensus buy targets vs current price</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="targetChart" height="170"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Investment Thesis -->
+  <div class="grid-3" style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title" style="color:#76b900;">NVDA — Why This Pick</div>
+        <div class="card-sub">20% of portfolio · Highest growth potential</div>
+      </div>
+      <div class="card-body" style="font-size:12.5px;color:var(--text2);line-height:1.7;">
+        <div style="margin-bottom:8px;">● AI GPU demand accelerating — data centers are upgrading to Blackwell architecture</div>
+        <div style="margin-bottom:8px;">● Analysts project 61% revenue growth in FY2027</div>
+        <div style="margin-bottom:8px;">● Dominant market share (80%+) in AI training chips</div>
+        <div style="color:var(--red);font-weight:600;">⚠ High volatility · Risk 8/10 · Watch for AI capex slowdown</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title" style="color:#0081fb;">META + AMZN — Why These Picks</div>
+        <div class="card-sub">16% + 16% of portfolio · Growth + Cloud</div>
+      </div>
+      <div class="card-body" style="font-size:12.5px;color:var(--text2);line-height:1.7;">
+        <div style="margin-bottom:8px;">● META: 26% projected revenue growth 2026, AI-driven ad platform gains</div>
+        <div style="margin-bottom:8px;">● AMZN: AWS cloud + AI services growing 17%+ YoY</div>
+        <div style="margin-bottom:8px;">● Both profitable with strong free cash flow</div>
+        <div style="color:var(--gold);font-weight:600;">⚠ Regulation risk (EU) · Advertising cyclicality</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title" style="color:#cc0000;">VOO + T-Bond — Why These Picks</div>
+        <div class="card-sub">32% + 20% of portfolio · Stability layer</div>
+      </div>
+      <div class="card-body" style="font-size:12.5px;color:var(--text2);line-height:1.7;">
+        <div style="margin-bottom:8px;">● VOO tracks 500 largest US companies — built-in diversification</div>
+        <div style="margin-bottom:8px;">● 10-Year Treasury at 4.50% yield — best risk-free rate in 15+ years</div>
+        <div style="margin-bottom:8px;">● Bond acts as a crash buffer: if stocks fall, bond holds par value</div>
+        <div style="color:var(--green);font-weight:600;">✓ Lowest risk holdings · Protect downside</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sources -->
+  <div class="card full" style="margin-bottom:8px;">
+    <div class="card-head">
+      <div class="card-title" style="color:var(--text2);">Data Sources &amp; References — June 17, 2026</div>
+    </div>
+    <div class="card-body" style="font-size:12px;color:var(--text2);line-height:2;">
+      <a href="https://finance.yahoo.com/quote/NVDA/" style="color:var(--blue);text-decoration:none;">● NVDA Stock Price — Yahoo Finance</a><br>
+      <a href="https://tradingeconomics.com/united-states/government-bond-yield" style="color:var(--blue);text-decoration:none;">● US 10-Year Treasury Yield (4.50%) — TradingEconomics</a><br>
+      <a href="https://fred.stlouisfed.org/series/DGS10" style="color:var(--blue);text-decoration:none;">● Treasury Rate Data — FRED St. Louis Fed</a><br>
+      <a href="https://www.marketbeat.com/stocks/NYSEARCA/VOO/dividend/" style="color:var(--blue);text-decoration:none;">● VOO Dividend Yield (1.10%) — MarketBeat</a><br>
+      <a href="https://money.usnews.com/investing/articles/best-growth-stocks-to-buy" style="color:var(--blue);text-decoration:none;">● Best Growth Stocks 2026 — U.S. News</a><br>
+      <a href="https://www.insidermonkey.com/blog/10-best-performing-growth-stocks-so-far-in-2026-1778368/" style="color:var(--blue);text-decoration:none;">● Top Performing Stocks 2026 — Insider Monkey</a><br>
+      <div style="margin-top:8px;color:var(--text3);font-size:11px;">
+        META entry price ~$600 estimated from analyst reports. AAPL $299.24, AMZN $246.00 per CNBC/Yahoo Finance mid-June 2026.
+        NVDA $205.35 per Yahoo Finance June 17, 2026. All projections are estimates only.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#8b949e';
+
+const MONTHS_H1 = ['Jan','Feb','Mar','Apr','May','Jun'];
+const MONTHS_ALL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* ═════════════════════════════
+   1. PERFORMANCE LINE CHART (indexed to 100)
+═════════════════════════════ */
+const perfData = {
+  NVDA: [100, 106.8, 116.2, 123.6, 132.4, 138.8],
+  META: [100, 103.0, 105.3, 108.0, 110.8, 113.3],
+  AMZN: [100, 102.2, 105.3, 107.1, 107.9, 109.3],
+  VOO:  [100, 101.0, 102.6, 103.4, 104.8, 106.0],
+  Bond: [100, 100.4, 100.7, 101.1, 101.5, 102.3],
+};
+
+const perf_colors = {
+  NVDA: '#76b900', META: '#0081fb', AMZN: '#ff9900', VOO: '#cc0000', Bond: '#1a7abf'
+};
+
+new Chart(document.getElementById('perfChart'), {
+  type: 'line',
+  data: {
+    labels: MONTHS_H1,
+    datasets: Object.entries(perfData).map(([k, v]) => ({
+      label: k,
+      data: v,
+      borderColor: perf_colors[k],
+      backgroundColor: 'transparent',
+      borderWidth: k === 'NVDA' ? 2.5 : 1.8,
+      pointRadius: 3,
+      pointBackgroundColor: perf_colors[k],
+      tension: 0.4,
+    }))
+  },
+  options: {
+    plugins: {
+      legend: { labels: { boxWidth: 10, boxHeight: 10, padding: 14, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(48,54,61,0.6)' }, border: { display: false }, ticks: { font: { size: 11 } } },
+      y: {
+        grid: { color: 'rgba(48,54,61,0.6)' }, border: { display: false },
+        ticks: { callback: v => v + '%', font: { size: 11 } },
+        min: 98,
+      }
+    }
+  }
+});
+
+/* ═════════════════════════════
+   2. ALLOCATION DONUT
+═════════════════════════════ */
+new Chart(document.getElementById('allocChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['NVDA (19.8%)', 'META (16.2%)', 'AMZN (15.6%)', 'VOO (30.2%)', 'T-Bond (18.2%)'],
+    datasets: [{
+      data: [5550.82, 4535.60, 4373.88, 8474.40, 5112.50],
+      backgroundColor: ['#76b900','#0081fb','#ff9900','#cc0000','#1a7abf'],
+      borderWidth: 2,
+      borderColor: '#161b22',
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    cutout: '68%',
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 10, boxHeight: 10, padding: 10, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: $${ctx.raw.toFixed(2)}` } }
+    }
+  }
+});
+
+/* ═════════════════════════════
+   3. P&L GROUPED BAR
+═════════════════════════════ */
+new Chart(document.getElementById('plChart'), {
+  type: 'bar',
+  data: {
+    labels: ['NVDA','META','AMZN','VOO','T-Bond'],
+    datasets: [
+      {
+        label: 'Cost Basis',
+        data: [4000, 4000, 4000, 8000, 5000],
+        backgroundColor: 'rgba(139,148,158,0.25)',
+        borderRadius: 5,
+        borderSkipped: false,
+      },
+      {
+        label: 'Current Value',
+        data: [5550.82, 4535.60, 4373.88, 8474.40, 5112.50],
+        backgroundColor: ['#76b900','#0081fb','#ff9900','#cc0000','#1a7abf'],
+        borderRadius: 5,
+        borderSkipped: false,
+      }
+    ]
+  },
+  options: {
+    plugins: {
+      legend: { labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}` } }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 12, weight: '700' } } },
+      y: {
+        grid: { color: 'rgba(48,54,61,0.6)' }, border: { display: false },
+        ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k', font: { size: 11 } }
+      }
+    }
+  }
+});
+
+/* ═════════════════════════════
+   4. RISK vs RETURN BUBBLE
+═════════════════════════════ */
+new Chart(document.getElementById('riskChart'), {
+  type: 'bubble',
+  data: {
+    datasets: [
+      { label:'NVDA',   data:[{x:8,  y:55, r:14}], backgroundColor:'rgba(118,185,0,0.6)',   borderColor:'#76b900', borderWidth:1.5 },
+      { label:'META',   data:[{x:7,  y:35, r:12}], backgroundColor:'rgba(0,129,251,0.6)',   borderColor:'#0081fb', borderWidth:1.5 },
+      { label:'AMZN',   data:[{x:6,  y:28, r:12}], backgroundColor:'rgba(255,153,0,0.6)',   borderColor:'#ff9900', borderWidth:1.5 },
+      { label:'VOO',    data:[{x:3,  y:14, r:16}], backgroundColor:'rgba(204,0,0,0.6)',     borderColor:'#cc0000', borderWidth:1.5 },
+      { label:'T-Bond', data:[{x:1,  y:4.5,r:11}], backgroundColor:'rgba(26,122,191,0.6)',  borderColor:'#1a7abf', borderWidth:1.5 },
+    ]
+  },
+  options: {
+    plugins: {
+      legend: { labels: { boxWidth: 10, boxHeight: 10, padding: 12, font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}  Risk: ${ctx.raw.x}/10  ·  Expected: ${ctx.raw.y}%`
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Risk Score (1–10)', font: { size: 11 } },
+        min: 0, max: 10,
+        grid: { color: 'rgba(48,54,61,0.6)' }, border: { display: false },
+        ticks: { font: { size: 11 } }
+      },
+      y: {
+        title: { display: true, text: 'Expected Annual Return (%)', font: { size: 11 } },
+        grid: { color: 'rgba(48,54,61,0.6)' }, border: { display: false },
+        ticks: { callback: v => v + '%', font: { size: 11 } }
+      }
+    }
+  }
+});
+
+/* ═════════════════════════════
+   5. PROJECTION LINE CHART (full year)
+═════════════════════════════ */
+// Portfolio total value simulated monthly (Jan=25000)
+const actual_vals    = [25000, 25950, 26800, 27200, 27680, 28047];
+const proj_base      = [null,null,null,null,null,28047, 28800, 29400, 30000, 30500, 31000, 31250];
+const proj_bull      = [null,null,null,null,null,28047, 29500, 30500, 31400, 32200, 33000, 33800];
+const proj_bear      = [null,null,null,null,null,28047, 27800, 27300, 26900, 26600, 26300, 26100];
+
+new Chart(document.getElementById('projChart'), {
+  type: 'line',
+  data: {
+    labels: MONTHS_ALL,
+    datasets: [
+      {
+        label: 'Actual',
+        data: [...actual_vals, ...Array(6).fill(null)],
+        borderColor: '#58a6ff',
+        backgroundColor: 'rgba(88,166,255,0.08)',
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#58a6ff',
+        fill: true,
+        tension: 0.4,
+      },
+      {
+        label: 'Bull Case',
+        data: proj_bull,
+        borderColor: '#3fb950',
+        backgroundColor: 'rgba(63,185,80,0.04)',
+        borderWidth: 1.8,
+        borderDash: [6,4],
+        pointRadius: 3,
+        fill: true,
+        tension: 0.4,
+      },
+      {
+        label: 'Base Case',
+        data: proj_base,
+        borderColor: '#58a6ff',
+        backgroundColor: 'transparent',
+        borderWidth: 1.8,
+        borderDash: [6,4],
+        pointRadius: 3,
+        tension: 0.4,
+      },
+      {
+        label: 'Bear Case',
+        data: proj_bear,
+        borderColor: '#f85149',
+        backgroundColor: 'rgba(248,81,73,0.04)',
+        borderWidth: 1.8,
+        borderDash: [6,4],
+        pointRadius: 3,
+        fill: true,
+        tension: 0.4,
+      }
+    ]
+  },
+  options: {
+    plugins: {
+      legend: { labels: { boxWidth: 10, boxHeight: 10, padding: 16, font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.raw != null
+            ? ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString('en-US',{minimumFractionDigits:0})}`
+            : null
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(48,54,61,0.6)' }, border: { display: false }, ticks: { font: { size: 11 } } },
+      y: {
+        grid: { color: 'rgba(48,54,61,0.6)' }, border: { display: false },
+        ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k', font: { size: 11 } },
+        min: 23000,
+      }
+    }
+  }
+});
+
+/* ═════════════════════════════
+   6. ANALYST PRICE TARGETS BAR
+═════════════════════════════ */
+new Chart(document.getElementById('targetChart'), {
+  type: 'bar',
+  data: {
+    labels: ['NVDA','META','AMZN','VOO'],
+    datasets: [
+      {
+        label: 'Current Price',
+        data: [205.35, 680, 246, 535],
+        backgroundColor: ['rgba(118,185,0,0.4)','rgba(0,129,251,0.4)','rgba(255,153,0,0.4)','rgba(204,0,0,0.4)'],
+        borderRadius: 4,
+        borderSkipped: false,
+      },
+      {
+        label: '12-Mo Target',
+        data: [260, 780, 295, 580],
+        backgroundColor: ['#76b900','#0081fb','#ff9900','#cc0000'],
+        borderRadius: 4,
+        borderSkipped: false,
+      }
+    ]
+  },
+  options: {
+    plugins: {
+      legend: { labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.raw}` } }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 12, weight: '700' } } },
+      y: {
+        grid: { color: 'rgba(48,54,61,0.6)' }, border: { display: false },
+        ticks: { callback: v => '$' + v, font: { size: 11 } }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
